@@ -4,5 +4,5 @@ matplotlib
 networkx
 scipy
 fpdf
-web: gunicorn app:app
+gunicorn
 python-3.10.12
