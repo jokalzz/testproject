@@ -1,7 +1,8 @@
 Flask
+gunicorn
 pandas
 matplotlib
 networkx
-scipy
 fpdf
-gunicorn
+seaborn
+scipy
