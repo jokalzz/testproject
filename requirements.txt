@@ -1,0 +1,8 @@
+Flask
+pandas
+matplotlib
+networkx
+scipy
+fpdf
+web: gunicorn app:app
+python-3.10.12

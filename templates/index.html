@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Construction Project Duration Estimation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <style>
+        body {
+            background-color: #f0f4f8;
+        }
+        header {
+            background-color: #003366;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            animation: fadeIn 1s ease-in;
+        }
+        header img {
+            height: 60px;
+            width: auto;
+        }
+        header .header-text {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        header .header-text h1 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 2rem;
+            line-height: 1.2;
+        }
+        .container-lg {
+            margin-top: 30px;    
+        }
+        header .header-text p {
+            margin: 0;
+            font-size: 0.95rem;
+            opacity: 0.8;
+        }
+        .btn-primary {
+            background-color: #0d3b66;
+            border-color: #0d3b66;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #08427a;
+            border-color: #08427a;
+            transform: scale(1.05);
+        }
+        footer {
+            background-color: #003366;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        footer a {
+            color: #f0f4f8;
+            text-decoration: none;    
+        }
+        .btn-success {
+            background-color: #118ab2;
+            border-color: #118ab2;
+        }
+        .btn-success:hover {
+            background-color: #0c6a8a;
+            border-color: #0c6a8a;
+        }
+        .btn-info {
+            background-color: #20c997;
+            border-color: #20c997;
+        }
+        .btn-info:hover {
+            background-color: #1aa57a;
+            border-color: #1aa57a;
+        }
+        .alert-info {
+            background-color: #caf0f8;
+            color: #0077b6;
+            border-color: #90e0ef;
+            animation: fadeIn 1s ease-in;
+        }
+        .alert-secondary {
+            background-color: #e0e0e0;
+            color: #444;
+            border-color: #ccc;
+            animation: fadeIn 1s ease-in;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='logo_unsrat.jpeg') }}" alt="Logo logo_unsrat.jpeg" />
+        <div class="header-text">
+            <h1 class="animate__animated animate__bounce">Construction Project Duration Estimation</h1>
+            <p>
+                <strong>Nama:</strong> Eurene M. Rawis | 
+                <strong>NIM:</strong> 230221010033 | 
+                <strong>Fakultas:</strong> Teknik Sipil
+            </p>
+        </div>
+    </header>
+
+    <div class="container-lg">
+        <div class="alert alert-info">
+            <strong>Petunjuk Umum:</strong> Isi minimal 1 aktivitas dengan nama unik. Pastikan kolom waktu Optimistic ≤ Most Likely ≤ Pessimistic.
+        </div>
+
+        <div class="alert alert-secondary">
+            <strong>Petunjuk Dependencies:</strong><br>
+            Masukkan nama aktivitas yang menjadi dependensi, dipisahkan koma. Contoh: <em>A,B</em><br>
+            Kosongkan jika tidak ada dependensi.<br>
+            Pastikan nama aktivitas dependensi sudah ada di daftar aktivitas.
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mt-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" onsubmit="return validateForm()">
+            <div id="activity-fields">
+                <div class="row mb-4 align-items-start">
+                    <div class="col">
+                        <input type="text" name="activity[]" class="form-control" placeholder="Activity (e.g. A)" required>
+                    </div>
+                    <div class="col">
+                        <input type="number" step="0.01" name="duration[]" class="form-control" placeholder="Duration" required min="0">
+                    </div>
+                    <div class="col">
+                        <input type="number" step="0.01" name="optimistic[]" class="form-control" placeholder="Optimistic Time" required min="0">
+                    </div>
+                    <div class="col">
+                        <input type="number" step="0.01" name="most_likely[]" class="form-control" placeholder="Most Likely Time" required min="0">
+                    </div>
+                    <div class="col">
+                        <input type="number" step="0.01" name="pessimistic[]" class="form-control" placeholder="Pessimistic Time" required min="0">
+                    </div>
+                    <div class="col">
+                        <input type="text" name="dependencies[]" class="form-control" placeholder="Dependencies (comma separated, e.g. A,B)">
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.row').remove()" title="Remove activity row">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-secondary" onclick="addActivity()">+ Add Activity</button>
+                <button type="submit" class="btn btn-primary ms-2">Calculate</button>
+            </div>
+        </form>
+
+        {% if table %}
+            <h3 class="mt-4">PERT Calculation Results</h3>
+            {{ table | safe }}
+
+            <h3 class="mt-4">Scheduling Times (ES, EF, LS, LF, Slack)</h3>
+            {{ timing_table | safe }}
+
+            <h3 class="mt-4">Probabilitas Penyelesaian Proyek</h3>
+            <ul>
+                <li><strong>Waktu yang Diharapkan (Te):</strong> {{ '%.2f'|format(critical_path_duration) }} hari</li>
+                <li><strong>Varians Jalur Kritis (V):</strong> {{ '%.4f'|format(variance_critical_path) }} hari</li>
+                <li><strong>Deviasi Standar (S):</strong> {{ '%.4f'|format(std_dev_critical_path) }} hari</li>
+                <li><strong>Target Waktu Penyelesaian (Td):</strong> <input type="number" step="0.01" name="target_time" class="form-control" placeholder="Input Target Time" required min="0"></li>
+                <li><strong>Z-Score (Z):</strong> {{ '%.4f'|format(Z) }}</li>
+                <li><strong>Probabilitas selesai tepat waktu:</strong> {{ '%.2f'|format(probability_on_time * 100) }}%</li>
+            </ul>
+
+            <div class="mb-3">
+                <button type="button" class="btn btn-primary" onclick="calculateZScore()">Calculate Z-Score</button>
+            </div>
+
+            <h3 class="mt-4">PERT Time Estimated Chart</h3>
+            <img src="{{ image }}" alt="PERT Chart" class="img-fluid mb-4" />
+
+            <h3>PERT Network Planning Diagram</h3>
+            <img src="{{ image_network }}" alt="Network Planning Diagram" class="img-fluid mb-4" />
+
+            {% if critical_path %}
+                <h3>Critical Path</h3>
+                <p><strong>Path:</strong> <span class="text-danger">{{ critical_path | join(' -> ') }}</span></p>
+                <p><strong>Total Estimated Duration:</strong> {{ '%.2f'|format(critical_path_duration) }} units</p>
+            {% endif %}
+
+            <div class="mb-4">
+                <a href="{{ url_for('export_pdf') }}" class="btn btn-success" onclick="return validatePDF()">Download Report (PDF)</a>
+                <a href="{{ url_for('download_excel') }}" class="btn btn-info">Download Report (Excel)</a>
+            </div>
+
+            <h3 class="mt-4">Total Varians (V)</h3>
+            <p><strong>Total Varians:</strong> {{ '%.4f'|format(variance_critical_path) }} hari</p>
+        {% endif %}
+    </div>
+
+    <footer>
+        <p>&copy; 2025 PERT Method Calculator | <a href="https://github.com/your-repo">GitHub Repository</a></p>
+    </footer>
+
+    <script>
+        function addActivity() {
+            let div = document.createElement("div");
+            div.classList.add("row", "mb-4", "align-items-start");
+            div.innerHTML = `
+                <div class="col">
+                    <input type="text" name="activity[]" class="form-control" placeholder="Activity (e.g. A)" required>
+                </div>
+                <div class="col">
+                    <input type="number" step="0.01" name="duration[]" class="form-control" placeholder="Duration" required min="0">
+                </div>
+                <div class="col">
+                    <input type="number" step="0.01" name="optimistic[]" class="form-control" placeholder="Optimistic Time" required min="0">
+                </div>
+                <div class="col">
+                    <input type="number" step="0.01" name="most_likely[]" class="form-control" placeholder="Most Likely Time" required min="0">
+                </div>
+                <div class="col">
+                    <input type="number" step="0.01" name="pessimistic[]" class="form-control" placeholder="Pessimistic Time" required min="0">
+                </div>
+                <div class="col">
+                    <input type="text" name="dependencies[]" class="form-control" placeholder="Dependencies (comma separated, e.g. A,B)">
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.row').remove()" title="Remove activity row">×</button>
+                </div>
+            `;
+            document.getElementById("activity-fields").appendChild(div);
+        }
+
+        function validatePDF() {
+            try {
+                const pdfBtn = document.querySelector('.btn-success');
+                if (pdfBtn) {
+                    pdfBtn.disabled = true;
+                    return confirm('Generate PDF report?'); // Confirm before proceeding
+                }
+                return true;
+            } catch (e) {
+                console.error('PDF validation error:', e);
+                return confirm('Generate PDF report?');
+            }
+        }
+
+        function validateForm() {
+            const activityInputs = document.querySelectorAll('input[name="activity[]"]');
+            let activityNames = [];
+            for (const input of activityInputs) {
+                let val = input.value.trim();
+                if (!val) {
+                    alert("Activity name tidak boleh kosong.");
+                    input.focus();
+                    return false;
+                }
+                if (activityNames.includes(val)) {
+                    alert("Nama aktivitas harus unik: '" + val + "' sudah ada.");
+                    input.focus();
+                    return false;
+                }
+                activityNames.push(val);
+            }
+
+            const optimisticInputs = document.querySelectorAll('input[name="optimistic[]"]');
+            const mostLikelyInputs = document.querySelectorAll('input[name="most_likely[]"]');
+            const pessimisticInputs = document.querySelectorAll('input[name="pessimistic[]"]');
+
+            for (let i = 0; i < optimisticInputs.length; i++) {
+                const o = parseFloat(optimisticInputs[i].value);
+                const m = parseFloat(mostLikelyInputs[i].value);
+                const p = parseFloat(pessimisticInputs[i].value);
+                if (!(o <= m && m <= p)) {
+                    alert(`Validasi waktu salah pada aktivitas '${activityNames[i]}': harus Optimistic ≤ Most Likely ≤ Pessimistic.`);
+                    optimisticInputs[i].focus();
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function calculateZScore() {
+            // Implement the logic to calculate Z-Score based on the input target time
+            const targetTimeInput = document.querySelector('input[name="target_time"]');
+            const targetTime = parseFloat(targetTimeInput.value);
+            // You can add logic here to calculate Z-Score and update the UI accordingly
+            alert(`Target Time: ${targetTime}`);
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
