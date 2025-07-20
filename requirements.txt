@@ -5,4 +5,3 @@ networkx
 scipy
 fpdf
 gunicorn
-python-3.10.12
